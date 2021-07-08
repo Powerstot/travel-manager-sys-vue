@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+        form{
+            width:270px;
+        }
+        input{
+            width: 70%;
+            background: #eee;
+        }
+        input:focus{
+            background: #fff;
+        }
+        form{
+            padding: 0 12px 12px;
+        }
+        label{
+            display: block;
+            padding-bottom:12px;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        input[type=text], select {
+            width: 35%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+    <script src="../js/echarts.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <div id="wrap">
+        <div id="header">
+            <div style="float: right;padding-top: 24px"><span>&nbsp;&nbsp;&nbsp;&nbsp;</span>Copyright ©2021 Powerstot All Rights Reserved</div>
+            <div style="float: right;padding-top: 24px"><a href="../monitor/monitorlist.html">返回</a></div>
+            <h1>旅游信息管理系统</h1>
+        </div>
+
+        <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+        <div id="content" style="float:left;width: 100%">
+                <div id="main1" style="width: 550px;height:600px;float: left"></div>
+                <div id="main2" style="width: 550px;height:600px;float: left"></div>
+        </div>
+
+        <div id="footer">
+            travel.powerstot.top
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="../js/axios.min.js"></script>
+<script src="../js/vue.js"></script>
+<script>
+    const app = new Vue({
+        el:"#app",
+        data:{
+            monitors:[],
+            checkedCount:"",
+            unCheckedCount:"",
+        },
+        methods:{
+            findMonitorTotal() {
+                _this = this;
+                axios.get("http://localhost:8989/monitor/findMonitorTotal").then((res)=> {
+                    this.monitors = res.data;
+                    this.drawChart();
+                });
+            },
+            drawChart() {
+                var chartDom = document.getElementById('main1');
+                var myChart = echarts.init(chartDom);
+                var option;
+                // ['2021-06-12', '击', '柱', '子', '或', '者', '两', '指', '在', '123']
+                var dataAxis = this.monitors.map((item) => {
+                    return item.date;
+                });
+                // [220, 182, 191, 234, 290, 330, 310, 123, 442, 321]
+                var data = this.monitors.map((item) => {
+                    return item.count;
+                });
+                var yMax = 20;
+                var dataShadow = [];
+
+                for (var i = 0; i < data.length; i++) {
+                    dataShadow.push(yMax);
+                }
+
+                option = {
+                    title: {
+                        text: '2021年游客监测数据统计柱状图',
+                        subtext: 'Statistical histogram of tourist monitoring data in 2021'
+                    },
+                    xAxis: {
+                        data: dataAxis,
+                        axisLabel: {
+                            inside: true,
+                            textStyle: {
+                                color: '#fff'
+                            }
+                        },
+                        axisTick: {
+                            show: false
+                        },
+                        axisLine: {
+                            show: false
+                        },
+                        z: 10
+                    },
+                    yAxis: {
+                        axisLine: {
+                            show: false
+                        },
+                        axisTick: {
+                            show: false
+                        },
+                        axisLabel: {
+                            textStyle: {
+                                color: '#999'
+                            }
+                        }
+                    },
+                    dataZoom: [
+                        {
+                            type: 'inside'
+                        }
+                    ],
+                    series: [
+                        {
+                            type: 'bar',
+                            showBackground: true,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(
+                                    0, 0, 0, 1,
+                                    [
+                                        {offset: 0, color: '#83bff6'},
+                                        {offset: 0.5, color: '#188df0'},
+                                        {offset: 1, color: '#188df0'}
+                                    ]
+                                )
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    color: new echarts.graphic.LinearGradient(
+                                        0, 0, 0, 1,
+                                        [
+                                            {offset: 0, color: '#2378f7'},
+                                            {offset: 0.7, color: '#2378f7'},
+                                            {offset: 1, color: '#83bff6'}
+                                        ]
+                                    )
+                                }
+                            },
+                            data: data
+                        }
+                    ]
+                };
+
+                // Enable data zoom when user click bar.
+                var zoomSize = 6;
+                myChart.on('click', function (params) {
+                    console.log(dataAxis[Math.max(params.dataIndex - zoomSize / 2, 0)]);
+                    myChart.dispatchAction({
+                        type: 'dataZoom',
+                        startValue: dataAxis[Math.max(params.dataIndex - zoomSize / 2, 0)],
+                        endValue: dataAxis[Math.min(params.dataIndex + zoomSize / 2, data.length - 1)]
+                    });
+                });
+
+                option && myChart.setOption(option);
+            },
+            findCheckCount() {
+                _this = this;
+              axios.get("http://localhost:8989/monitor/findCheckCount").then((res)=> {
+                  _this.checkedCount = res.data.checkedCount;
+                  _this.unCheckedCount = res.data.unCheckedCount;
+                  this.drawChart2();
+              })
+            },
+            drawChart2(){
+                // var echarts = require('echarts');
+
+                var chartDom = document.getElementById('main2');
+                var myChart = echarts.init(chartDom);
+                var option;
+
+                option = {
+                    title: {
+                        text: '处理记录统计',
+                        subtext: 'Record processing statistics',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                    },
+                    series: [
+                        {
+                            name: '处理类型',
+                            type: 'pie',
+                            radius: '70%',
+                            data: [
+                                {value: this.checkedCount, name: '已处理记录'},
+                                {value: this.unCheckedCount, name: '未处理记录'}
+                            ],
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(47,227,14,0.5)'
+                                }
+                            }
+                        }
+                    ]
+                };
+                option && myChart.setOption(option);
+            }
+        },
+        mounted() {
+            this.findMonitorTotal();
+            this.findCheckCount();
+        }
+    });
+</script>
+

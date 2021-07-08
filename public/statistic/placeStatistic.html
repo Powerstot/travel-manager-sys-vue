@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+
+    <style>
+        form{
+            width:270px;
+        }
+        input{
+            width: 70%;
+            background: #eee;
+        }
+        input:focus{
+            background: #fff;
+        }
+        form{
+            padding: 0 12px 12px;
+        }
+        label{
+            display: block;
+            padding-bottom:12px;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        input[type=text], select {
+            width: 35%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+    <script src="../js/echarts.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <div id="wrap">
+        <div id="header">
+            <div style="float: right;padding-top: 24px"><span>&nbsp;&nbsp;&nbsp;&nbsp;</span>Copyright ©2021 Powerstot All Rights Reserved</div>
+            <div style="float: right;padding-top: 24px"><a href="../province/provincelist.html">返回</a></div>
+            <h1>旅游信息管理系统</h1>
+        </div>
+
+        <div>
+            <!--<input type="text" v-model="rows">-->
+            <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <input type="text" v-model="rows" placeholder="请输入要统计的省份数量">
+            <button class="button" @click="findAll(rows)">查询</button>
+        </div>
+
+        <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+        <div id="main" style="width: 600px;height:400px;"></div>
+
+        <div id="footer">
+            travel.powerstot.top
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="../js/axios.min.js"></script>
+<script src="../js/vue.js"></script>
+<script>
+    const app = new Vue({
+        el:"#app",
+        data:{
+            rows: "",
+            provinces:[],
+        },
+        methods:{
+            findAll(rows) {
+                if (rows) {
+                    this.rows = rows;
+                } else {
+                    this.rows = 10;
+                }
+                _this = this;
+                axios.get("http://localhost:8989/province/findByPage?rows=" + this.rows).then((res)=> {
+                    _this.provinces = res.data.provinces;
+                    this.drawChart();
+                });
+            },
+            drawChart() {
+                // 基于准备好的dom，初始化echarts实例
+                let myChart = echarts.init(document.getElementById('main'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart.setOption({
+                    title: {
+                        text: '省份景点信息'
+                    },
+                    tooltip: {},
+                    legend: {
+                        data:['景点数量']
+                    },
+                    xAxis: {
+                        data:this.provinces.map((item) => {
+                            return item.name;
+                        })
+                    },
+                    yAxis: {
+                    },
+                    series: [
+                        {
+                            name: '景点数量',
+                            type: 'bar',
+                            data: this.provinces.map((item) => {
+                                return item.placeCounts;
+                            })
+                        }
+                    ]
+                });
+            }
+        },
+        mounted() {
+            this.findAll(10);
+            // this.drawChart();
+        }
+    });
+</script>
+

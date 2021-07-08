@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        form{
+            width:270px;
+        }
+        input{
+            width: 64%;
+            background: #eee;
+        }
+        input:focus{
+            background: #fff;
+        }
+        form{
+            padding: 0 12px 12px;
+        }
+        label{
+            display: block;
+            padding-bottom:12px;
+        }
+        .label-text{
+            width: 36%;
+            float: left;
+        }
+        #img-show{
+            width: 135px;
+            height: 135px;
+            display: block;
+            margin: 0 auto;
+            object-fit: cover;
+        }
+    </style>
+    <script>
+        function imgfileChange() {
+            var img_show = document.getElementById("img-show");
+            var imgfile = document.getElementById("imgfile");
+
+            var freader = new FileReader();
+            freader.readAsDataURL(imgfile.files[0]);
+            freader.onload = function (e) {
+                img_show.src = e.target.result;
+            };
+        }
+    </script>
+</head>
+<body>
+<div id="app">
+    <div id="wrap">
+        <div id="header">
+            <div style="float: right;padding-top: 24px">Copyright ©2021 Powerstot All Rights Reserved</div>
+            <h1>旅游信息管理系统</h1>
+        </div>
+        <div id="header-bar"></div>
+        <div id="content" style="height: 480px">
+            <img src="../img/timg.jpg" style="float: right;height: 320px">
+            <h2>修改景点</h2>
+            <form action="viewspotlist.html" method="post">
+                <label>
+                    <div class="label-text">景&emsp;&emsp;点：</div>
+                    <input type="text" v-model="place.name">
+                </label>
+                <label>
+                    <div class="label-text">印象图片：</div>
+                    <div style="text-align: center;padding-left: 36%">
+                        <img :src=src alt="" id="img-show">
+                        <input type="file" id="imgfile" ref="myFile" style="display: none" onchange="imgfileChange()">
+                    </div>
+                </label>
+                <label>
+                    <div class="label-text">旺季时间：</div>
+                    <input type="text" v-model="place.hotTime" name="hottime" value="4.1~10.31">
+                </label>
+                <label>
+                    <div class="label-text">旺季门票：</div>
+                    <input type="text" v-model="place.hotTicket" name="hotprice" value="30">
+                </label>
+                <label>
+                    <div class="label-text">淡季门票：</div>
+                    <input type="text" v-model="place.dimTicket" name="normalprice" value="20">
+                </label>
+                <label>
+                    <div class="label-text">景点描述：</div>
+                    <input type="text" v-model="place.placeDes" name="normalprice">
+                </label>
+                <label>
+                    <div class="label-text">所属省份：</div>
+                    <select name="ofprovince" v-model="place.provinceId">
+                        <option :value="province.id" v-for="province in provinces" v-text="province.name"></option>
+                    </select>
+                </label>
+                <button type="button" @click="updatePlace">提 交</button>&emsp;
+                <a :href="'viewspotlist.html?provinceId=' + place.provinceId">返回</a>
+            </form>
+        </div>
+        <div id="footer">
+            travel.powerstot.top
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="../js/axios.min.js"></script>
+<script src="../js/vue.js"></script>
+<script>
+    const app = new Vue({
+        el:"#app",
+        data:{
+            id:"",
+            place:{},
+            provinces:[],
+            src:"",
+        },
+        methods:{
+            findOne() {
+                _this = this;
+                axios.get("http://localhost:8989/place/findOne?id=" + this.id).then((res)=>{
+                    console.log(res.data);
+                    _this.place = res.data;
+                    _this.src = "data:image/png;base64," + _this.place.picPath;
+                });
+            },
+            findAllProvince() {
+                _this = this;
+                axios.get("http://localhost:8989/province/findByPage?rows=35").then((res)=> {
+                    _this.provinces = res.data.provinces;
+                });
+            },
+            updatePlace() {
+                let myFile = this.$refs.myFile;
+                let files = myFile.files;
+                let file = files[0];
+
+                let formData = new FormData();
+
+                //append中第一个参数相当于表单中的name，后台通过这个获得数据
+                formData.append("pic", file);
+                formData.append("id", this.place.id);
+                formData.append("name", this.place.name);
+                formData.append("hotTime", this.place.hotTime);
+                formData.append("hotTicket", this.place.hotTicket);
+                formData.append("dimTicket", this.place.dimTicket);
+                formData.append("placeDes", this.place.placeDes);
+                formData.append("provinceId", this.place.provinceId);
+                _this = this;
+                axios({
+                    method:'post',
+                    url:'http://localhost:8989/place/update',
+                    data:formData,
+                    headers:{
+                        'Content-Type' : 'multipart/form-data'
+                    }
+                }).then((res) => {
+                    console.log(res.data);
+                    if (res.data.status) {
+                        Swal.fire('修改成功', res.data.msg + '点击确定之后跳到对应景点列表', 'success').then(()=> {
+                            location.href = "./viewspotlist.html?provinceId=" + _this.place.provinceId;
+                        });
+                    } else {
+                        Swal.fire('修改失败', res.data.msg, 'error');
+                    }
+                });
+            }
+        },
+        created(){
+            let id = location.href.substring(location.href.indexOf('=') + 1);
+            this.id = id;
+            this.findOne();
+            this.findAllProvince();
+        }
+    });
+</script>
